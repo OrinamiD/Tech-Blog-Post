@@ -1,0 +1,207 @@
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import type { IAdmin } from "../models/admin.model.js";
+import Admin from "../models/admin.model.js";
+import { generateOTP, handleHashedPassword } from "../utils/hashedPawword.js";
+import type { RequestEmail, RequestPassword } from "../types/auth.types.js";
+import { forgottenPasswordEmail } from "../emails/forgottenPassword.email.js";
+import { loginNotoficationEmail } from "../emails/loginNotification.email.js";
+import { registrationEmail } from "../emails/registration.email.js";
+import { resendOtpEmail } from "../emails/resendOtp.email.js";
+
+export const registerAdmin = async (data: IAdmin) => {
+  const { email, phoneNumber, password, firstName, lastName } = data;
+
+  const existingUser = await Admin.findOne({
+    $or: [{ email }, { phoneNumber }],
+  });
+
+  if (existingUser) {
+    throw new Error("User already exists");
+  }
+
+  const hashed = await handleHashedPassword(password);
+
+  const otp = generateOTP();
+
+  const newUser = new Admin({
+    ...data,
+    password: hashed,
+    otp,
+    otpExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
+  });
+
+  const savedUser = await newUser.save();
+
+  (savedUser as any).password = undefined;
+
+  await registrationEmail(email, firstName, lastName, otp);
+
+  const userObj = savedUser.toObject();
+
+  return { user: userObj };
+};
+
+export const loginAdmin = async (
+  email: string,
+  password: string,
+  phoneNumber: string,
+) => {
+  try {
+    const existingAdmin = await Admin.findOne({
+      $or: [{ email }, { phoneNumber }],
+    });
+
+    if (!existingAdmin) {
+      throw new Error("User not found.");
+    }
+
+    if (!existingAdmin.isVerified) {
+      throw new Error("Account not verified. Please check your email for OTP.");
+    }
+
+    if (!existingAdmin.isAdmin) {
+      throw new Error("Contact Super-Admin for access");
+    }
+
+    const isMatch = await bcrypt.compare(password, existingAdmin?.password);
+    if (!isMatch) {
+      throw new Error("Incorrect email or password.");
+    }
+
+    (existingAdmin as any).password = undefined;
+
+    const accessToken = jwt.sign(
+      { id: existingAdmin?._id, role: existingAdmin.role },
+      `${process.env.ACCESS_TOKEN}`,
+      { expiresIn: "5m" },
+    );
+
+    const refreshToken = jwt.sign(
+      { id: existingAdmin?._id, role: existingAdmin.role },
+      `${process.env.REFRESH_TOKEN}`,
+      { expiresIn: "7d" },
+    );
+
+    await loginNotoficationEmail(email);
+
+    const userObject = existingAdmin.toObject();
+
+    return {
+      message: "Account verified successfully.",
+      user: userObject,
+      accessToken,
+      refreshToken,
+    };
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+export const verifyOtp = async (email: string, otp: string) => {
+  if (!otp) {
+    throw new Error("otp is required");
+  }
+  const admin = await Admin.findOne({ email });
+
+  if (!admin) {
+    throw new Error("User not found.");
+  }
+
+  if (!admin.otp || !admin.otpExpiresAt) {
+    throw new Error("No OTP set");
+  }
+
+  if (admin.otpExpiresAt < new Date()) {
+    throw new Error("OTP expired");
+  }
+
+  if (admin.otp !== otp) {
+    throw new Error("Invalid OTP.");
+  }
+
+  admin.isVerified = true;
+
+  await admin.save();
+
+  return admin;
+};
+
+export const resendOtp = async (data: IAdmin) => {
+  const { email, phoneNumber } = data;
+  try {
+    const user = await Admin.findOne({
+      $or: [{ email }, { phoneNumber }],
+    });
+    if (!user) throw new Error("User not found");
+
+    if (user.isVerified) throw new Error("User already verified");
+
+    const newOtp = generateOTP();
+
+    user.otp = newOtp;
+    user.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    await user.save();
+
+    await resendOtpEmail(email, newOtp);
+
+    return true;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};
+
+export const forgotPassword = async (data: RequestEmail) => {
+  try {
+    const { email } = data;
+    if (!email) {
+      throw new Error("Email not provided");
+    }
+    const user = await Admin.findOne({ email });
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const firstName = user.firstName;
+    const lastName = user.lastName;
+    const fullName = `${firstName} ${lastName}`;
+
+    const forgotPasswordData = {
+      email: email,
+      fullName: fullName,
+    };
+
+    const otp = generateOTP();
+
+    await forgottenPasswordEmail(email, firstName, lastName, otp);
+
+    console.log(`✅ Forgot password email sent to: ${email}`);
+
+    return forgotPasswordData;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};
+
+export const passwordReset = async (data: RequestPassword) => {
+  const { password, otp } = data;
+
+  if (!password || !otp) {
+    throw new Error("Password reset credential missing");
+  }
+
+  const user = await Admin.findOne({ otp });
+
+  if (!user) {
+    throw new Error("Invalid OTP");
+  }
+
+  const hashedPassword = await handleHashedPassword(password);
+
+  user.password = hashedPassword;
+
+  await user.save();
+
+  return {user: user}
+};
