@@ -1,6 +1,7 @@
 // userAuth.route.ts
 import express, { Router } from "express";
 import {
+  isAdmin,
   loginValidation,
   validateSignup,
 } from "../middlewares/auth.middleware.js";

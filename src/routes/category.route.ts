@@ -1,7 +1,7 @@
 // category.route.ts
 import express, { Router } from "express";
 import {
-    createCategory,
+  createCategory,
   getAllCategory,
   getCategory,
   updateCatogory,
@@ -144,7 +144,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.get("/get-category/:id", auth, isAdmin, validateID, getCategory);
+router.get("/get-category/:id", auth, validateID, getCategory);
 
 /**
  * @swagger
@@ -178,7 +178,7 @@ router.get("/get-category/:id", auth, isAdmin, validateID, getCategory);
  *       500:
  *         description: Internal server error
  */
-router.get("/get-all-category", auth, isAdmin, getAllCategory);
+router.get("/get-all-category", auth, getAllCategory);
 
 /**
  * @swagger

@@ -34,6 +34,7 @@ const router: Router = express.Router();
  *           schema:
  *             type: object
  *             required:
+ *                - role
  *               - firstName
  *               - lastName
  *               - email
@@ -159,7 +160,7 @@ router.post("/register-admin", isAdmin, validateSignup, registration);
  *       400:
  *         description: Invalid or expired OTP
  */
-router.post("/admin/verify-otp",  otpVerification);
+router.post("/admin/verify-otp", otpVerification);
 
 /**
  * @swagger

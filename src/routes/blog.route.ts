@@ -161,7 +161,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.get("/get-all-blog", auth, isAdmin, getAllBlog);
+router.get("/get-all-blog", auth, getAllBlog);
 
 /**
  * @swagger
@@ -194,7 +194,7 @@ router.get("/get-all-blog", auth, isAdmin, getAllBlog);
  *       500:
  *         description: Internal server error
  */
-router.get("/get-blog/:id", auth, isAdmin, getBlog);
+router.get("/get-blog/:id", auth,  getBlog);
 
 /**
  * @swagger

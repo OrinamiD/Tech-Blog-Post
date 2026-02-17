@@ -81,27 +81,23 @@ export const validateSignup = async (
   next();
 };
 
-export const loginValidation: RequestHandler = (
+export const loginValidation = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  let { email, phone, password } = req.body as {
-    email?: string;
-    phone?: string;
-    password?: string;
-  };
+  const { email, phoneNumber, password } = req.body;
 
-  if (email) email = email.trim().toLowerCase();
-  if (phone) phone = phone.trim();
+  const errors = [];
 
-  if (!email && !phone) {
-    throw new Error("Provide your email or phone number.");
+  if (!email && !phoneNumber) errors.push("fill the required field");
+
+  if (!password) errors.push("password is required");
+
+  if (errors.length > 0) {
+    return res.status(401).json({ success: false, message: errors });
   }
 
-  if (!password) {
-    throw new Error("Incorrect password, email or phone number.");
-  }
   next();
 };
 
