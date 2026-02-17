@@ -227,6 +227,6 @@ router.get("/get-all-category", auth, getAllCategory);
  *       500:
  *         description: Internal server error
  */
-router.put("/update-category/:id", auth, isAdmin, validateID, updateCatogory);
+router.patch("/update-category/:id", auth, isAdmin, validateID, updateCatogory);
 
 export default router;

@@ -34,7 +34,7 @@ const router: Router = express.Router();
  *           schema:
  *             type: object
  *             required:
- *                - role
+ *               - role
  *               - firstName
  *               - lastName
  *               - email
@@ -43,6 +43,8 @@ const router: Router = express.Router();
  *               - phoneNumber
  *               - gender
  *             properties:
+ *               role:
+ *                 type: string
  *               firstName:
  *                 type: string
  *                 example: John

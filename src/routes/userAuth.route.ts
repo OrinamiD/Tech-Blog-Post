@@ -30,6 +30,7 @@ const router: Router = express.Router();
  *     User:
  *       type: object
  *       required:
+ *         - role
  *         - firstName
  *         - lastName
  *         - email
@@ -41,6 +42,8 @@ const router: Router = express.Router();
  *         _id:
  *           type: string
  *           description: Auto-generated user ID
+ *         role:
+ *           type: string
  *         firstName:
  *           type: string
  *           description: User's first name
